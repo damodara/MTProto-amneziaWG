@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # --- AmneziaWG VPN ---
+  amnezia-wg-easy:
+    image: ghcr.io/deckersu/amnezia-wg-easy:latest
+    container_name: amnezia-wg-easy
+    environment:
+      - LANG=ru
+      - WG_HOST=${WG_HOST}          # IP-адрес сервера из .env файла
+      - PASSWORD_HASH=${PASSWORD_HASH}       # Хеш пароля из .env файла
+    volumes:
+      - ~/.amnezia-wg-easy:/etc/amnezia/amneziawg
+    ports:
+      - "51820:51820/udp"   # Порт для VPN-клиентов
+      - "51821:51821/tcp"   # Порт веб-интерфейса управления
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    restart: on-failure:3
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:51821"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # --- MTProto Proxy ---
+  mtproto-proxy:
+    image: telegrammessenger/proxy:latest
+    container_name: mtproto-proxy
+    restart: on-failure:3
+    ports:
+      - "443:443"                # Порт для подключения из Telegram
+    environment:
+      # Секрет из .env файла
+      - SECRET=${SECRET}
+    volumes:
+      - ./mtproto-data:/data     # Данные прокси (секрет, статистика)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "netstat", "-an" ,"|", "grep", ":443" ,"|", "grep", "LISTEN"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
