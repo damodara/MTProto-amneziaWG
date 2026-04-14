@@ -24,11 +24,10 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            cd /path/to/MTProto-amnezia-wg
+            cd /home/damodara/MTProto-amneziaWG
             git pull origin main
-            docker-compose down
-            docker-compose up -d
-            echo "Deployment completed at $(date)"
+            docker compose down || true
+            docker compose up -d
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.0
